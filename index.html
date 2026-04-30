@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Personalised Percentile Tool</title>
+<title>Personalised Percentile Tool for SSST</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 
@@ -70,7 +70,7 @@ height: 320px;
 
 <script>
 
-// ---- MODEL COEFFICIENTS (REPLACE THESE) ----
+// ---- MODEL COEFFICIENTS (REPLACE THESE IF NEEDED) ----
 const b0 = 49.44;
 const bAge = -0.24;
 const bMale = -1.28;
@@ -136,6 +136,22 @@ return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);
 
 const data = d3.range(-4,4.01,0.1).map(d => ({x:d,y:pdf(d)}));
 
+// ---- RED ZONE (bottom 2.5%) ----
+const cutoff = -1.96;
+const shadedData = data.filter(d => d.x <= cutoff);
+
+const area = d3.area()
+.x(d => x(d.x))
+.y0(y(0))
+.y1(d => y(d.y));
+
+svg.append("path")
+.datum(shadedData)
+.attr("d", area)
+.attr("fill", "red")
+.attr("opacity", 0.3);
+
+// ---- MAIN CURVE ----
 const line = d3.line()
 .x(d => x(d.x))
 .y(d => y(d.y));
@@ -147,20 +163,22 @@ svg.append("path")
 .attr("stroke","#1f6feb")
 .attr("stroke-width",2);
 
-// highlight user point
+// ---- USER POINT (BLACK DOT) ----
 svg.append("circle")
 .attr("cx", x(zHighlight))
 .attr("cy", y(pdf(zHighlight)))
 .attr("r",6)
-.attr("fill","red");
+.attr("fill","black");
 
+// ---- VERTICAL LINE ----
 svg.append("line")
 .attr("x1", x(zHighlight))
 .attr("x2", x(zHighlight))
 .attr("y1", y(0))
 .attr("y2", y(pdf(zHighlight)))
-.attr("stroke","red")
+.attr("stroke","black")
 .attr("stroke-dasharray","4");
+
 }
 
 </script>
