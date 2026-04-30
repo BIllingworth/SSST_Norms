@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Z-score Percentile Tool</title>
+
+<!-- D3 for graph -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  background: #f4f6f8;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 25px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 24px;
+}
+
+.row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.col {
+  flex: 1;
+  min-width: 280px;
+}
+
+input[type="number"] {
+  width: 120px;
+  padding: 8px;
+  font-size: 16px;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+.output {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1f6feb;
+  margin-top: 10px;
+}
+
+.small {
+  color: #666;
+  font-size: 14px;
+}
+
+svg {
+  width: 100%;
+  height: 320px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="card">
+    <h1>Z-score → Percentile Converter</h1>
+    <p class="small">
+      Converts a z-score on a standard normal distribution into a percentile.
+    </p>
+  </div>
+
+  <div class="card row">
+
+    <div class="col">
+      <h3>Input</h3>
+
+      <label>Z-score</label><br>
+      <input id="zInput" type="number" step="0.01" value="0">
+
+      <br><br>
+
+      <label>Or use slider</label>
+      <input id="zSlider" type="range" min="-4" max="4" step="0.01" value="0">
+
+      <div class="output" id="output">50.00%</div>
+
+      <p class="small">
+        Based on the standard <b>normal distribution</b>.
+      </p>
+    </div>
+
+    <div class="col">
+      <h3>Visualisation</h3>
+      <svg id="chart"></svg>
+    </div>
+
+  </div>
+</div>
+
+<script>
+
+// ---- Normal CDF ----
+function erf(x) {
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,
+        a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+  const t = 1/(1+p*x);
+  const y = 1-((((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x));
+  return sign*y;
+}
+
+function normCDF(z){
+  return (1 + erf(z/Math.sqrt(2))) / 2;
+}
+
+// ---- UI update ----
+function update(z) {
+  const p = normCDF(z) * 100;
+  document.getElementById("output").innerText = p.toFixed(2) + "%";
+  draw(z);
+  document.getElementById("zInput").value = z;
+  document.getElementById("zSlider").value = z;
+}
+
+// ---- Plot ----
+function draw(zHighlight) {
+  const svg = d3.select("#chart");
+  svg.selectAll("*").remove();
+
+  const width = 600, height = 300;
+  const margin = 40;
+
+  const x = d3.scaleLinear().domain([-4,4]).range([margin, width-margin]);
+  const y = d3.scaleLinear().domain([0,0.4]).range([height-margin, margin]);
+
+  function pdf(x){
+    return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);
+  }
+
+  const data = d3.range(-4,4.01,0.1).map(d => ({x:d,y:pdf(d)}));
+
+  const line = d3.line()
+    .x(d => x(d.x))
+    .y(d => y(d.y));
+
+  svg.append("path")
+    .datum(data)
+    .attr("d", line)
+    .attr("fill","none")
+    .attr("stroke","#1f6feb")
+    .attr("stroke-width",2);
+
+  // highlight point
+  svg.append("circle")
+    .attr("cx", x(zHighlight))
+    .attr("cy", y(pdf(zHighlight)))
+    .attr("r",6)
+    .attr("fill","red");
+
+  svg.append("line")
+    .attr("x1", x(zHighlight))
+    .attr("x2", x(zHighlight))
+    .attr("y1", y(0))
+    .attr("y2", y(pdf(zHighlight)))
+    .attr("stroke","red")
+    .attr("stroke-dasharray","4");
+}
+
+// ---- events ----
+document.getElementById("zInput").addEventListener("input", e => update(+e.target.value));
+document.getElementById("zSlider").addEventListener("input", e => update(+e.target.value));
+
+update(0);
+
+</script>
+
+</body>
+</html>
